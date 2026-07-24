@@ -1,0 +1,245 @@
+openapi: 3.0.1
+info:
+  title: Ceylon Adds System API
+  description: API documentation for authentication and application user management
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8081/api/v1
+    description: Local development server
+
+paths:
+  /auth/login:
+    post:
+      summary: Send OTP for user login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApplicationUserLoginRequestDTO'
+      responses:
+        '200':
+          description: OTP sent successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponseDTO'
+
+  /auth/verify-otp:
+    post:
+      summary: Verify OTP and log in user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApplicationUserOTPRequestDTO'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponseDTO'
+
+  /users/{userId}:
+    get:
+      summary: Get a user by ID
+      parameters:
+        - in: path
+          name: userId
+          schema:
+            type: string
+            format: uuid
+          required: true
+      responses:
+        '200':
+          description: User details
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/StandardResponseDTO'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ApplicationUserResponseDTO'
+        '404':
+          description: User not found
+        '500':
+          description: Server error
+
+    put:
+      summary: Update user details
+      parameters:
+        - in: path
+          name: userId
+          schema:
+            type: string
+            format: uuid
+          required: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApplicationUserRequestDTO'
+      responses:
+        '200':
+          description: User updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponseDTO'
+
+    delete:
+      summary: Delete a user
+      parameters:
+        - in: path
+          name: userId
+          schema:
+            type: string
+            format: uuid
+          required: true
+      responses:
+        '200':
+          description: User deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponseDTO'
+
+  /users/{userId}/status:
+    patch:
+      summary: Change active status of a user
+      parameters:
+        - in: path
+          name: userId
+          schema:
+            type: string
+            format: uuid
+          required: true
+        - in: query
+          name: active
+          schema:
+            type: boolean
+          required: true
+      responses:
+        '200':
+          description: Status changed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponseDTO'
+
+  /users/search:
+    get:
+      summary: Search users with pagination
+      parameters:
+        - in: query
+          name: searchText
+          schema:
+            type: string
+          required: false
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 0
+        - in: query
+          name: size
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Paginated user list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponseDTO'
+
+components:
+  schemas:
+#    ApplicationUser:
+#      type: object
+#      properties:
+#        propertyId:
+#          type: string
+#          format: uuid
+#        mobileNumber:
+#          type: string
+#        activeState:
+#          type: boolean
+#        accountId:
+#          type: integer
+#        createdAt:
+#          type: string
+#          format: date-time
+#        updatedAt:
+#          type: string
+#          format: date-time
+#        avatarUrl:
+#          type: string
+
+    ApplicationUserRequestDTO:
+      type: object
+      properties:
+        mobileNumber:
+          type: string
+
+    ApplicationUserResponseDTO:
+      type: object
+      properties:
+        propertyId:
+          type: string
+          format: uuid
+        mobileNumber:
+          type: string
+        activeState:
+          type: boolean
+        accountId:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        avatarUrl:
+          type: string
+
+    ApplicationUserLoginRequestDTO:
+      type: object
+      properties:
+        mobileNumber:
+          type: string
+
+    ApplicationUserOTPRequestDTO:
+      type: object
+      properties:
+        mobileNumber:
+          type: string
+        otp:
+          type: string
+
+    PaginateApplicationUserDTO:
+      type: object
+      properties:
+        count:
+          type: integer
+        dataList:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApplicationUserResponseDTO'
+
+    StandardResponseDTO:
+      type: object
+      properties:
+        code:
+          type: integer
+        message:
+          type: string
+        data:
+          nullable: true
