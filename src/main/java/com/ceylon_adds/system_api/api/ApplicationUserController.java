@@ -23,7 +23,7 @@ public class ApplicationUserController {
     private final ApplicationUserService applicationUserService;
 
     @Operation(summary = "Update user", description = "Update user details by ID")
-    @PreAuthorize("hasAnyRole('USER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'HOST', 'USER')")
     @PutMapping("/{userId}")
     public ResponseEntity<StandardResponseDTO> updateUser(
             @PathVariable UUID userId,
@@ -133,6 +133,41 @@ public class ApplicationUserController {
                 StandardResponseDTO.builder()
                         .code(200)
                         .message("Blacklisted users retrieved successfully")
+                        .data(response)
+                        .build()
+        );
+    }
+
+    @Operation(summary = "Allocate credits to user", description = "Allocate or top up credits for an Ads Agent user")
+    @PreAuthorize("hasAnyRole('ADMIN', 'HOST')")
+    @PostMapping("/{userId}/allocate-credits")
+    public ResponseEntity<StandardResponseDTO> allocateCredits(
+            @PathVariable UUID userId,
+            @RequestParam Double amount) {
+
+        applicationUserService.allocateCredits(userId, amount);
+        return ResponseEntity.ok(
+                StandardResponseDTO.builder()
+                        .code(200)
+                        .message("Credits allocated successfully")
+                        .data(null)
+                        .build()
+        );
+    }
+
+    @Operation(summary = "Search Ads Agents", description = "Search users with ADS_AGENT role")
+    @PreAuthorize("hasAnyRole('ADMIN', 'HOST')")
+    @GetMapping("/ads-agents/search")
+    public ResponseEntity<StandardResponseDTO> searchAdsAgents(
+            @RequestParam(required = false) String searchText,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+
+        PaginateApplicationUserDTO response = applicationUserService.getAdsAgents(searchText, page, size);
+        return ResponseEntity.ok(
+                StandardResponseDTO.builder()
+                        .code(200)
+                        .message("Ads Agents retrieved successfully")
                         .data(response)
                         .build()
         );

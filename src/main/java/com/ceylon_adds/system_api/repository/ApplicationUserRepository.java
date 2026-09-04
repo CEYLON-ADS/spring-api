@@ -20,6 +20,7 @@ public interface ApplicationUserRepository extends JpaRepository<ApplicationUser
     @Query("""
         SELECT u FROM ApplicationUser u 
         WHERE u.mobileNumber LIKE CONCAT('%', :searchText, '%')
+           OR LOWER(u.username) LIKE LOWER(CONCAT('%', :searchText, '%'))
            OR CAST(u.accountId AS string) LIKE CONCAT('%', :searchText, '%')
            OR (u.activeState = true AND LOWER(:searchText) = 'true')
            OR (u.activeState = false AND LOWER(:searchText) = 'false')
@@ -35,6 +36,7 @@ public interface ApplicationUserRepository extends JpaRepository<ApplicationUser
            FROM ApplicationUser u 
            WHERE 
                 (u.mobileNumber LIKE CONCAT('%', :searchText, '%')
+                OR LOWER(u.username) LIKE LOWER(CONCAT('%', :searchText, '%'))
                 OR CAST(u.accountId AS string) LIKE CONCAT('%', :searchText, '%'))
                 AND (u.activeState = true)
     """)
@@ -46,11 +48,33 @@ public interface ApplicationUserRepository extends JpaRepository<ApplicationUser
            FROM ApplicationUser u 
            WHERE 
                 (u.mobileNumber LIKE CONCAT('%', :searchText, '%')
+                OR LOWER(u.username) LIKE LOWER(CONCAT('%', :searchText, '%'))
                 OR CAST(u.accountId AS string) LIKE CONCAT('%', :searchText, '%'))
                 AND (u.activeState = false)
     """)
     Page<ApplicationUser> searchBlackListedUsers(@Param("searchText") String searchText,Pageable pageable);
 
+
+    @Query("""
+           SELECT u 
+           FROM ApplicationUser u 
+           JOIN u.roles r 
+           WHERE r.roleName = 'ADS_AGENT'
+    """)
+    Page<ApplicationUser> findAllAdsAgents(Pageable pageable);
+
+    @Query("""
+           SELECT u 
+           FROM ApplicationUser u 
+           JOIN u.roles r 
+           WHERE r.roleName = 'ADS_AGENT' 
+             AND (
+                u.mobileNumber LIKE CONCAT('%', :searchText, '%')
+                OR LOWER(u.username) LIKE LOWER(CONCAT('%', :searchText, '%'))
+                OR CAST(u.accountId AS string) LIKE CONCAT('%', :searchText, '%')
+             )
+    """)
+    Page<ApplicationUser> searchAdsAgents(@Param("searchText") String searchText, Pageable pageable);
 
     Long countByActiveStateTrueAndCreatedAtBetween(Instant start, Instant end);
 }

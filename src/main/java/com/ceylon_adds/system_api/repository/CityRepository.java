@@ -11,7 +11,7 @@ import org.springframework.data.repository.query.Param;
 import java.util.Optional;
 import java.util.UUID;
 
-public interface CityRepository extends JpaRepository<City, UUID> {
+public interface CityRepository extends JpaRepository<City, String> {
 
 
     @Query("""

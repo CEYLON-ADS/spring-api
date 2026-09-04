@@ -12,6 +12,7 @@ import com.ceylon_adds.system_api.exception.EntryNotFoundException;
 import com.ceylon_adds.system_api.repository.*;
 import com.ceylon_adds.system_api.service.FileService;
 import com.ceylon_adds.system_api.service.GeneralAdvertisementService;
+import com.ceylon_adds.system_api.service.SystemSettingService;
 import com.ceylon_adds.system_api.util.FileDataHandler;
 import com.ceylon_adds.system_api.util.IdGenerator;
 import com.ceylon_adds.system_api.util.UploadedResourceBinaryDataDTO;
@@ -22,6 +23,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -47,6 +49,7 @@ public class GeneralAdvertisementServiceImpl implements GeneralAdvertisementServ
     private final FileDataHandler fileDataHandler;
     private final FileService fileService;
     private final IdGenerator idGenerator;
+    private final SystemSettingService systemSettingService;
 
     @Value("${aws.bucketName}")
     private String bucketName;
@@ -67,7 +70,7 @@ public class GeneralAdvertisementServiceImpl implements GeneralAdvertisementServ
 
         GeneralAdvertisement ad = GeneralAdvertisement.builder()
                 .title(dto.getTitle())
-                .activeStatus(true)
+                .activeStatus(false)
                 .whatsapp(dto.getWhatsapp())
                 .telegram(dto.getTelegram())
                 .viber(dto.getViber())
@@ -129,7 +132,7 @@ public class GeneralAdvertisementServiceImpl implements GeneralAdvertisementServ
         if (dto.getCityIds() != null) {
             Set<GeneralAdAvCity> cities = new HashSet<>();
             dto.getCityIds().forEach(cityId -> {
-                City city = cityRepo.findById(cityId)
+                City city = cityRepo.findById(cityId.toString())
                         .orElseThrow(() -> new EntryNotFoundException("City not found"));
 
 
@@ -237,7 +240,7 @@ public class GeneralAdvertisementServiceImpl implements GeneralAdvertisementServ
         GeneralAdvertisementProcess savedAdProcess = processRepo.save(process);
 
 
-        for (MultipartFile file : dto.getImages()){
+        for (MultipartFile file : dto.getSlips()){
             uploadedResourceBinaryDataDTO = fileService.create(file, bucketName, "payments/generalAdvertisement/slips");
 
             generalAdvertisePaymentSlips.add(
@@ -258,7 +261,7 @@ public class GeneralAdvertisementServiceImpl implements GeneralAdvertisementServ
         if (dto.getCityIds() != null) {
             Set<GeneralAdAvCity> cities = new HashSet<>();
             dto.getCityIds().forEach(cityId -> {
-                City city = cityRepo.findById(cityId)
+                City city = cityRepo.findById(cityId.toString())
                         .orElseThrow(() -> new EntryNotFoundException("City not found"));
 
 
@@ -328,14 +331,40 @@ public class GeneralAdvertisementServiceImpl implements GeneralAdvertisementServ
             GeneralAdvertisementProcess process = processRepo.findById(unverifiedProcessesByAdvertisement.get(0).getPropertyId())
                     .orElseThrow(() -> new EntryNotFoundException("Ad process not found"));
 
-            ApplicationUser user = applicationUserRepository.findById(verifiedBy)
-                    .orElseThrow(() -> new EntryNotFoundException("User not found"));
+            ApplicationUser user = null;
+            if (verifiedBy != null) {
+                user = applicationUserRepository.findById(verifiedBy).orElse(null);
+            }
+            if (user == null) {
+                try {
+                    var auth = SecurityContextHolder.getContext().getAuthentication();
+                    if (auth != null && auth.getName() != null) {
+                        user = applicationUserRepository.findByUsername(auth.getName()).orElse(null);
+                        if (user == null) {
+                            user = applicationUserRepository.findByMobileNumber(auth.getName()).orElse(null);
+                        }
+                    }
+                } catch (Exception ignored) {}
+            }
 
             process.setVerifiedStatus(true);
             process.setActiveStatus(true);
             process.setVerifiedBy(user);
             process.getAdvertisement().setActiveStatus(true);
             processRepo.save(process);
+
+            // Deduct credits from ad owner if they are an ADS_AGENT
+            ApplicationUser adOwner = generalAdvertisement.getUser();
+            if (adOwner != null && adOwner.getRoles() != null) {
+                boolean isAdsAgent = adOwner.getRoles().stream()
+                        .anyMatch(r -> "ADS_AGENT".equals(r.getRoleName()));
+                if (isAdsAgent) {
+                    Double cost = systemSettingService.getCreditCostPerAd();
+                    Double currentCredits = adOwner.getCredits() != null ? adOwner.getCredits() : 0.0;
+                    adOwner.setCredits(Math.max(0.0, currentCredits - cost));
+                    applicationUserRepository.save(adOwner);
+                }
+            }
         }
     }
 
@@ -413,27 +442,7 @@ public class GeneralAdvertisementServiceImpl implements GeneralAdvertisementServ
         GeneralAdvertisement ad = advertisementRepo.findById(advertisementId)
                 .orElseThrow(() -> new EntryNotFoundException("Ad not found"));
 
-        return GeneralAdvertisementResponseDTO.builder()
-                .propertyId(ad.getPropertyId())
-                .title(ad.getTitle())
-                .activeStatus(ad.getActiveStatus())
-                .whatsapp(ad.getWhatsapp())
-                .telegram(ad.getTelegram())
-                .imo(ad.getImo())
-                .viber(ad.getViber())
-                .isFake(ad.getIsFake())
-                .cities(ad.getCities().stream()
-                        .map(c -> c.getCity().getName())
-                        .toArray(String[]::new))
-                .imageUrls(ad.getAdvertiseImages().stream()
-                        .map(advertiseImage -> ImageUrlResponseDTO.builder()
-                                .propertyId(advertiseImage.getPropertyId())
-                                .url(fileDataHandler.byteArrayToString(advertiseImage.getResourceUrl()))
-                                .build()
-                        )
-                        .toList()
-                )
-                .build();
+        return mapToResponseDTO(ad);
     }
 
     @Override
@@ -452,35 +461,18 @@ public class GeneralAdvertisementServiceImpl implements GeneralAdvertisementServ
     @Transactional(readOnly = true)
     public PaginateGeneralAdvertisementDTO search(String searchText, int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdDate").descending());
-
-        Page<GeneralAdvertisement> resultPage;
-
-        if (searchText == null || searchText.isBlank()) {
-            resultPage = advertisementRepo.findAll(pageable);
-        } else {
-            resultPage = advertisementRepo.searchAdvertisements(searchText, pageable);
-        }
-
+        Page<GeneralAdvertisement> resultPage = advertisementRepo.searchPublicAdvertisements(searchText, pageable);
         return toPaginateGeneralAdvertisementDTO(resultPage);
     }
 
     @Override
     @Transactional(readOnly = true)
     public PaginateGeneralAdvertisementDTO findAllByCategoryAndSearch(UUID categoryId, String searchText, int page, int size) {
-
         Category category = categoryRepo.findById(categoryId)
                 .orElseThrow(() -> new EntityNotFoundException("Category not found with id: " + categoryId));
 
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdDate").descending());
-
-        Page<GeneralAdvertisement> resultPage;
-
-        if (searchText == null || searchText.isBlank()) {
-            resultPage = advertisementRepo.findAllByCategory(category, pageable);
-        } else {
-            resultPage = advertisementRepo.searchCategoryAdvertisements(categoryId,searchText, pageable);
-        }
-
+        Page<GeneralAdvertisement> resultPage = advertisementRepo.searchPublicCategoryAdvertisements(categoryId, searchText, pageable);
         return toPaginateGeneralAdvertisementDTO(resultPage);
     }
 
@@ -529,43 +521,62 @@ public class GeneralAdvertisementServiceImpl implements GeneralAdvertisementServ
 
 
     private PaginateGeneralAdvertisementDTO toPaginateGeneralAdvertisementDTO(Page<GeneralAdvertisement> resultPage){
-
         return PaginateGeneralAdvertisementDTO.builder()
                 .count(resultPage.getTotalElements())
                 .dataList(resultPage.getContent().stream()
-                        .map(ad -> GeneralAdvertisementResponseDTO.builder()
-                                .propertyId(ad.getPropertyId())
-                                .title(ad.getTitle())
-                                .activeStatus(ad.getActiveStatus())
-                                .whatsapp(ad.getWhatsapp())
-                                .telegram(ad.getTelegram())
-                                .imo(ad.getImo())
-                                .viber(ad.getViber())
-                                .isFake(ad.getIsFake())
-                                .cities(ad.getCities().stream()
-                                        .map(c -> c.getCity().getName())
-                                        .toArray(String[]::new))
-                                .imageUrls(ad.getAdvertiseImages().stream()
-                                        .map(advertiseImage -> ImageUrlResponseDTO.builder()
-                                                .propertyId(advertiseImage.getPropertyId())
-                                                .url(fileDataHandler.byteArrayToString(advertiseImage.getResourceUrl()))
-                                                .build()
-                                        )
-                                        .toList()
-                                )
-                                .markedFakedBy(ad.getMarkedFakeBy() != null ? ad.getMarkedFakeBy().getPropertyId().toString() : null)
-                                .markedFakedAt(ad.getMarkedFakeDate())
-                                .allLikes(ad.getGeneralAdvertisementProcess().stream()
-                                        .mapToInt(p -> p.getLikes() != null ? p.getLikes() : 0).sum())
-                                .allViews(ad.getGeneralAdvertisementProcess().stream()
-                                        .mapToInt(p -> p.getViews() != null ? p.getViews() : 0).sum())
-                                .userId(ad.getUser().getPropertyId())
-                                .userMobileNumber(ad.getUser().getMobileNumber())
-                                .categoryId(ad.getCategory().getPropertyId())
-                                .categoryName(ad.getCategory().getCategoryName())
-                                .fakeCount(ad.getFakeCount())
-                                .build())
+                        .map(this::mapToResponseDTO)
                         .collect(Collectors.toList()))
+                .build();
+    }
+
+    private GeneralAdvertisementResponseDTO mapToResponseDTO(GeneralAdvertisement ad) {
+        GeneralAdvertisementProcess process = ad.getGeneralAdvertisementProcess() != null && !ad.getGeneralAdvertisementProcess().isEmpty()
+                ? ad.getGeneralAdvertisementProcess().iterator().next()
+                : null;
+
+        String description = null;
+        Double price = null;
+        if (process != null) {
+            if (process.getDescription() != null) {
+                description = fileDataHandler.byteArrayToString(process.getDescription());
+            }
+            price = process.getAdvertiseCost();
+        }
+
+        return GeneralAdvertisementResponseDTO.builder()
+                .propertyId(ad.getPropertyId())
+                .title(ad.getTitle())
+                .activeStatus(ad.getActiveStatus())
+                .whatsapp(ad.getWhatsapp())
+                .telegram(ad.getTelegram())
+                .imo(ad.getImo())
+                .viber(ad.getViber())
+                .isFake(ad.getIsFake())
+                .cities(ad.getCities().stream()
+                        .map(c -> c.getCity().getName())
+                        .toArray(String[]::new))
+                .imageUrls(ad.getAdvertiseImages().stream()
+                        .map(advertiseImage -> ImageUrlResponseDTO.builder()
+                                .propertyId(advertiseImage.getPropertyId())
+                                .url(fileDataHandler.byteArrayToString(advertiseImage.getResourceUrl()))
+                                .build()
+                        )
+                        .toList()
+                )
+                .markedFakedBy(ad.getMarkedFakeBy() != null ? ad.getMarkedFakeBy().getPropertyId().toString() : null)
+                .markedFakedAt(ad.getMarkedFakeDate())
+                .allLikes(ad.getGeneralAdvertisementProcess().stream()
+                        .mapToInt(p -> p.getLikes() != null ? p.getLikes() : 0).sum())
+                .allViews(ad.getGeneralAdvertisementProcess().stream()
+                        .mapToInt(p -> p.getViews() != null ? p.getViews() : 0).sum())
+                .userId(ad.getUser() != null ? ad.getUser().getPropertyId() : null)
+                .userMobileNumber(ad.getUser() != null ? ad.getUser().getMobileNumber() : null)
+                .categoryId(ad.getCategory() != null ? ad.getCategory().getPropertyId() : null)
+                .categoryName(ad.getCategory() != null ? ad.getCategory().getCategoryName() : null)
+                .fakeCount(ad.getFakeCount())
+                .description(description)
+                .price(price)
+                .createdDate(ad.getCreatedDate())
                 .build();
     }
 

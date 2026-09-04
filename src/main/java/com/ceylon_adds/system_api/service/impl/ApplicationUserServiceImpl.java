@@ -66,8 +66,27 @@ public class ApplicationUserServiceImpl implements ApplicationUserService {
         }
 
         existingUser.setMobileNumber(dto.getMobileNumber());
+        if (dto.getUsername() != null) {
+            existingUser.setUsername(dto.getUsername().trim());
+        }
 
-        // no need to explicitly save() because JPA flushes changes at transaction commit
+        if (dto.getRoles() != null) {
+            Set<ApplicationUserRole> newRoles = new HashSet<>();
+            for (String roleName : dto.getRoles()) {
+                ApplicationUserRole role = applicationUserRoleRepository.findByRoleName(roleName)
+                        .orElseGet(() -> applicationUserRoleRepository.save(
+                                ApplicationUserRole.builder().roleName(roleName).build()
+                        ));
+                newRoles.add(role);
+            }
+            if (existingUser.getRoles() == null) {
+                existingUser.setRoles(new HashSet<>());
+            }
+            existingUser.getRoles().clear();
+            existingUser.getRoles().addAll(newRoles);
+        }
+
+        applicationUserRepository.save(existingUser);
     }
 
     @Override
@@ -258,15 +277,53 @@ public class ApplicationUserServiceImpl implements ApplicationUserService {
                 .build();
     }
 
+    @Override
+    @Transactional
+    public void allocateCredits(UUID userId, Double amount) {
+        ApplicationUser user = applicationUserRepository.findById(userId)
+                .orElseThrow(() -> new EntryNotFoundException("User not found"));
+        Double currentCredits = user.getCredits() != null ? user.getCredits() : 0.0;
+        user.setCredits(Math.max(0.0, currentCredits + amount));
+        applicationUserRepository.save(user);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PaginateApplicationUserDTO getAdsAgents(String searchText, int page, int pageSize) {
+        Pageable pageable = PageRequest.of(page, pageSize, Sort.by("createdAt").descending());
+        Page<ApplicationUser> resultPage;
+
+        if (searchText == null || searchText.isBlank()) {
+            resultPage = applicationUserRepository.findAllAdsAgents(pageable);
+        } else {
+            if (searchText.startsWith("0")) searchText = searchText.replaceFirst("^0", "+94");
+            resultPage = applicationUserRepository.searchAdsAgents(searchText, pageable);
+        }
+
+        return PaginateApplicationUserDTO.builder()
+                .count(resultPage.getTotalElements())
+                .dataList(resultPage.getContent().stream()
+                        .map(this::mapToResponseDTO)
+                        .collect(Collectors.toList()))
+                .build();
+    }
+
     private ApplicationUserResponseDTO mapToResponseDTO(ApplicationUser user) {
+        List<String> roleNames = user.getRoles() != null
+                ? user.getRoles().stream().map(ApplicationUserRole::getRoleName).collect(Collectors.toList())
+                : Collections.emptyList();
+
         return ApplicationUserResponseDTO.builder()
                 .propertyId(user.getPropertyId())
+                .username(user.getUsername())
                 .mobileNumber(user.getMobileNumber())
                 .activeState(user.getActiveState())
                 .accountId(user.getAccountId())
+                .credits(user.getCredits() != null ? user.getCredits() : 0.0)
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
                 .avatarUrl(user.getAvatar() != null ? fileDataHandler.byteArrayToString(user.getAvatar().getResourceUrl()) : null)
+                .roles(roleNames)
                 .build();
     }
 }

@@ -34,6 +34,10 @@ public class ApplicationUser {
     @Column(name = "username", unique = true)
     private String username;
 
+    @Builder.Default
+    @Column(name = "credits", columnDefinition = "DOUBLE DEFAULT 0.0")
+    private Double credits = 0.0;
+
     @Column(name = "password")
     private String password;
 

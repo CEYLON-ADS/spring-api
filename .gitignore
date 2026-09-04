@@ -19,7 +19,10 @@ Thumbs.db
 
 # Environment files
 .env
-.env.*
+.env.local
+.env.development
+.env.production
+!.env.example
 
 # Application configuration containing secrets
 src/main/resources/application.properties

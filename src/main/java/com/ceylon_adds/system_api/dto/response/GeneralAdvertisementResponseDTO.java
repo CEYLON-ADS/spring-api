@@ -31,5 +31,7 @@ public class GeneralAdvertisementResponseDTO {
     private UUID categoryId;
     private String categoryName;
     private Integer fakeCount;
-
+    private String description;
+    private Double price;
+    private Instant createdDate;
 }

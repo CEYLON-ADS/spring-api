@@ -26,6 +26,7 @@ public interface ApplicationUserService {
 
     PaginateApplicationUserDTO getBlackListedUsers(String searchText, int page, int size);
 
+    void allocateCredits(UUID userId, Double amount);
 
-
+    PaginateApplicationUserDTO getAdsAgents(String searchText, int page, int size);
 }

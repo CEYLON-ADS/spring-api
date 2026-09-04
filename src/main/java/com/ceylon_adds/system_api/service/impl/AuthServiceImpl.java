@@ -104,12 +104,18 @@ public class AuthServiceImpl implements AuthService {
                             .activeState(true)
                             .roles(new HashSet<>())
                             .build();
-                    // Assign default role
+                    // Assign default roles (PUBLIC_USER and USER)
+                    ApplicationUserRole publicRole = roleRepository.findByRoleName(UserRole.PUBLIC_USER.name())
+                            .orElseGet(() -> roleRepository.save(
+                                    ApplicationUserRole.builder()
+                                            .roleName(UserRole.PUBLIC_USER.name())
+                                            .build()));
                     ApplicationUserRole defaultRole = roleRepository.findByRoleName(UserRole.USER.name())
                             .orElseGet(() -> roleRepository.save(
                                     ApplicationUserRole.builder()
                                             .roleName(UserRole.USER.name())
                                             .build()));
+                    newUser.getRoles().add(publicRole);
                     newUser.getRoles().add(defaultRole);
                     return userRepository.save(newUser);
                 });
@@ -146,16 +152,16 @@ public class AuthServiceImpl implements AuthService {
 
         try {
             System.out.println("Your OTP code is: " + otpCode);
-//            Message message = Message.creator(
-//                    new PhoneNumber("whatsapp:" + (reformatMobileNumber(dto.getMobileNumber()))),
-//                    new PhoneNumber(twilioWhatsAppNumber),
-//                    "Your OTP code is: " + otpCode
-//            ).create();
-//            logger.info("OTP sent via WhatsApp to {}: Message SID {}", dto.getMobileNumber(), message.getSid());
-
+            String recipientNumber = reformatMobileNumber(dto.getMobileNumber().trim(), dto.getCountryCode() != null ? dto.getCountryCode().trim() : "+94");
+            Message message = Message.creator(
+                    new PhoneNumber("whatsapp:" + recipientNumber),
+                    new PhoneNumber(twilioWhatsAppNumber),
+                    "Your Queenslanka verification code is: " + otpCode
+            ).create();
+            logger.info("OTP sent via WhatsApp to {}: Message SID {}", recipientNumber, message.getSid());
         } catch (Exception e) {
             logger.error("Failed to send OTP via WhatsApp to {}: {}", dto.getMobileNumber(), e.getMessage());
-            logger.warn("SMS gateway error bypassed for local development. Use OTP '123456' to verify.");
+            logger.warn("WhatsApp gateway fallback active.");
         }
     }
 
@@ -261,7 +267,12 @@ public class AuthServiceImpl implements AuthService {
             throw new BadRequestException("Mobile number is already registered");
         }
 
-        // Fetch USER role
+        // Fetch PUBLIC_USER and USER roles
+        ApplicationUserRole publicRole = roleRepository.findByRoleName(UserRole.PUBLIC_USER.name())
+                .orElseGet(() -> roleRepository.save(
+                        ApplicationUserRole.builder()
+                                .roleName(UserRole.PUBLIC_USER.name())
+                                .build()));
         ApplicationUserRole defaultRole = roleRepository.findByRoleName(UserRole.USER.name())
                 .orElseGet(() -> roleRepository.save(
                         ApplicationUserRole.builder()
@@ -274,7 +285,7 @@ public class AuthServiceImpl implements AuthService {
                 .mobileNumber(formattedMobile)
                 .accountId(idGenerator.generateUserAccountId(userRepository))
                 .activeState(true)
-                .roles(new HashSet<>(java.util.Set.of(defaultRole)))
+                .roles(new HashSet<>(java.util.Set.of(publicRole, defaultRole)))
                 .build();
 
         userRepository.save(newUser);

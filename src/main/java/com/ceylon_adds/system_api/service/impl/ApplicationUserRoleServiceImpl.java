@@ -18,25 +18,14 @@ public class ApplicationUserRoleServiceImpl implements ApplicationUserRoleServic
 
     @Override
     public void initializeRoles() {
-        List<ApplicationUserRole> applicationUserRoles = applicationUserRoleRepository.findAll();
-
-        if(applicationUserRoles.isEmpty()){
-
-            ApplicationUserRole host = ApplicationUserRole.builder()
-                    .roleName(UserRole.HOST.name())
-                    .build();
-
-            ApplicationUserRole admin = ApplicationUserRole.builder()
-                    .roleName(UserRole.ADMIN.name())
-                    .build();
-
-            ApplicationUserRole user = ApplicationUserRole.builder()
-                    .roleName(UserRole.USER.name())
-                    .build();
-
-
-
-            applicationUserRoleRepository.saveAll(List.of(host,admin,user));
+        for (UserRole role : UserRole.values()) {
+            if (applicationUserRoleRepository.findByRoleName(role.name()).isEmpty()) {
+                applicationUserRoleRepository.save(
+                        ApplicationUserRole.builder()
+                                .roleName(role.name())
+                                .build()
+                );
+            }
         }
     }
 

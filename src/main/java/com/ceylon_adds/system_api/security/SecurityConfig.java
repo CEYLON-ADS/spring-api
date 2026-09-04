@@ -33,7 +33,7 @@ class SecurityConfig {
         CorsConfiguration corsConfiguration = new CorsConfiguration();
         corsConfiguration.setAllowedHeaders(List.of("*", "Content-Type"));
         corsConfiguration.setAllowedOrigins(List.of("*"));
-        corsConfiguration.setAllowedMethods(List.of("GET", "POST", "DELETE", "OPTION", "PUT", "PATCH"));
+        corsConfiguration.setAllowedMethods(List.of("GET", "POST", "DELETE", "OPTIONS", "OPTION", "PUT", "PATCH"));
         corsConfiguration.setAllowCredentials(false);
         corsConfiguration.setExposedHeaders(List.of("Authorization"));
 
@@ -50,6 +50,7 @@ class SecurityConfig {
                         .requestMatchers(HttpMethod.GET,"/api/v1/advertisement-slots/category/**").permitAll()
                         .requestMatchers(HttpMethod.GET,"/api/v1/advertisements/search").permitAll()
                         .requestMatchers(HttpMethod.GET,"/api/v1/advertisements/search/by-category/**").permitAll()
+                        .requestMatchers(HttpMethod.GET,"/api/v1/advertisements/*").permitAll()
                         .requestMatchers(HttpMethod.PATCH,"/api/v1/advertisements/fake-status/**").permitAll()
                         .requestMatchers(HttpMethod.GET,"/api/v1/advertise-types/**").permitAll()
                         .requestMatchers(HttpMethod.POST,"/api/v1/complaints").permitAll()

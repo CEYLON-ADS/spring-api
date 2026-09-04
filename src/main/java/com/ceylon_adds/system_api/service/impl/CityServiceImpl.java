@@ -185,7 +185,7 @@ public class CityServiceImpl implements CityService {
 
     @Override
     public void update(UUID cityId, CityRequestDTO dto) {
-        City city = cityRepository.findById(cityId)
+        City city = cityRepository.findById(cityId.toString())
                 .orElseThrow(() -> new EntryNotFoundException("City not found"));
 
         District district = districtRepository.findById(dto.getDistrictId())
@@ -198,15 +198,15 @@ public class CityServiceImpl implements CityService {
 
     @Override
     public void delete(UUID cityId) {
-        if (!cityRepository.existsById(cityId)) {
+        if (!cityRepository.existsById(cityId.toString())) {
             throw new EntityNotFoundException("City not found");
         }
-        cityRepository.deleteById(cityId);
+        cityRepository.deleteById(cityId.toString());
     }
 
     @Override
     public CityResponseDTO getById(UUID cityId) {
-        City city = cityRepository.findById(cityId)
+        City city = cityRepository.findById(cityId.toString())
                 .orElseThrow(() -> new EntryNotFoundException("City not found"));
 
         return CityResponseDTO.builder()

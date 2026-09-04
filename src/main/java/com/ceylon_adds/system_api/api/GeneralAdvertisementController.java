@@ -85,7 +85,6 @@ public class GeneralAdvertisementController {
     }
 
     @Operation(summary = "Get Advertisement by ID", description = "Retrieve advertisement details by ID")
-    @PreAuthorize("hasAnyRole('USER')")
     @GetMapping("/{adId}")
     public ResponseEntity<StandardResponseDTO> getAdvertisementById(@PathVariable UUID adId) {
         GeneralAdvertisementResponseDTO response = advertisementService.getById(adId);
@@ -184,7 +183,7 @@ public class GeneralAdvertisementController {
     @PostMapping("/verify/{adId}")
     public ResponseEntity<StandardResponseDTO> verifyAdvertisement(
             @PathVariable UUID adId,
-            @RequestParam UUID verifiedBy) {
+            @RequestParam(required = false) UUID verifiedBy) {
         advertisementService.verify(adId, verifiedBy);
         return ResponseEntity.ok(
                 StandardResponseDTO.builder()

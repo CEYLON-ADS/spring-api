@@ -15,31 +15,32 @@ import java.util.UUID;
 public interface GeneralAdvertisementRepository extends JpaRepository<GeneralAdvertisement, UUID> {
 
     @Query("""
-        SELECT ga FROM GeneralAdvertisement ga
-        WHERE LOWER(ga.title) LIKE LOWER(CONCAT('%', :searchText, '%'))
-           OR LOWER(ga.user.mobileNumber) LIKE LOWER(CONCAT('%', :searchText, '%'))
-           OR LOWER(ga.category.categoryName) LIKE LOWER(CONCAT('%', :searchText, '%'))
-           OR (ga.activeStatus = true AND LOWER(:searchText) = 'active')
-           OR (ga.activeStatus = false AND LOWER(:searchText) = 'inactive')
-           OR (ga.isFake = true AND LOWER(:searchText) = 'fake')
+        SELECT DISTINCT ga FROM GeneralAdvertisement ga
+        JOIN ga.generalAdvertisementProcess gap
+        WHERE ga.activeStatus = true AND gap.verifiedStatus = true
+          AND (
+            :searchText IS NULL OR :searchText = '' OR
+            LOWER(ga.title) LIKE LOWER(CONCAT('%', :searchText, '%'))
+            OR LOWER(ga.user.mobileNumber) LIKE LOWER(CONCAT('%', :searchText, '%'))
+            OR LOWER(ga.category.categoryName) LIKE LOWER(CONCAT('%', :searchText, '%'))
+          )
     """)
-    Page<GeneralAdvertisement> searchAdvertisements(@Param("searchText") String searchText, Pageable pageable);
-
+    Page<GeneralAdvertisement> searchPublicAdvertisements(@Param("searchText") String searchText, Pageable pageable);
 
     @Query("""
-    SELECT DISTINCT ga FROM GeneralAdvertisement ga
-    LEFT JOIN ga.cities gac
-    LEFT JOIN gac.city c
-    WHERE (
-           LOWER(ga.title) LIKE LOWER(CONCAT('%', :searchText, '%'))
-        OR (ga.activeStatus = true AND LOWER(:searchText) = 'active')
-        OR (ga.activeStatus = false AND LOWER(:searchText) = 'inactive')
-        OR (ga.isFake = true AND LOWER(:searchText) = 'fake')
-        OR (LOWER(c.name) LIKE LOWER(CONCAT('%', :searchText, '%')))
-    ) 
-    AND ga.category.propertyId = :categoryId
+        SELECT DISTINCT ga FROM GeneralAdvertisement ga
+        JOIN ga.generalAdvertisementProcess gap
+        LEFT JOIN ga.cities gac
+        LEFT JOIN gac.city c
+        WHERE ga.activeStatus = true AND gap.verifiedStatus = true
+          AND ga.category.propertyId = :categoryId
+          AND (
+            :searchText IS NULL OR :searchText = '' OR
+            LOWER(ga.title) LIKE LOWER(CONCAT('%', :searchText, '%'))
+            OR LOWER(c.name) LIKE LOWER(CONCAT('%', :searchText, '%'))
+          )
     """)
-    Page<GeneralAdvertisement> searchCategoryAdvertisements(
+    Page<GeneralAdvertisement> searchPublicCategoryAdvertisements(
             @Param("categoryId") UUID categoryId,
             @Param("searchText") String searchText,
             Pageable pageable
