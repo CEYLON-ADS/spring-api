@@ -17,9 +17,13 @@ public class GeneralAdvertisementByAdminRequestDTO {
 
     private String title;
     private Boolean whatsapp;
+    private String whatsappNumber;
     private Boolean telegram;
+    private String telegramNumber;
     private Boolean viber;
+    private String viberNumber;
     private Boolean imo;
+    private String imoNumber;
     private Boolean verify;
     private UUID categoryID;
     private List<UUID> cityIds;

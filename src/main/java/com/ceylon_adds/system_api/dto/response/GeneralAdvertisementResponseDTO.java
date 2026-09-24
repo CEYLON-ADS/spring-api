@@ -16,9 +16,13 @@ public class GeneralAdvertisementResponseDTO {
     private String title;
     private Boolean activeStatus;
     private Boolean whatsapp;
+    private String whatsappNumber;
     private Boolean telegram;
+    private String telegramNumber;
     private Boolean imo;
+    private String imoNumber;
     private Boolean viber;
+    private String viberNumber;
     private Boolean isFake;
     private String[] cities;
     private List<ImageUrlResponseDTO> imageUrls;

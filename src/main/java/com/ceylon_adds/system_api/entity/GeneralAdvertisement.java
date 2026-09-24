@@ -32,14 +32,26 @@ public class GeneralAdvertisement {
     @Column(name = "whatsapp", nullable = false, columnDefinition = "TINYINT")
     private Boolean whatsapp;
 
+    @Column(name = "whatsapp_number", length = 20)
+    private String whatsappNumber;
+
     @Column(name = "telegram", nullable = false, columnDefinition = "TINYINT")
     private Boolean telegram;
+
+    @Column(name = "telegram_number", length = 20)
+    private String telegramNumber;
 
     @Column(name = "imo", nullable = false, columnDefinition = "TINYINT")
     private Boolean imo;
 
+    @Column(name = "imo_number", length = 20)
+    private String imoNumber;
+
     @Column(name = "viber", nullable = false, columnDefinition = "TINYINT")
     private Boolean viber;
+
+    @Column(name = "viber_number", length = 20)
+    private String viberNumber;
 
     @Column(name = "fake_count")
     private Integer fakeCount;
