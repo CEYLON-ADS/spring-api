@@ -26,7 +26,7 @@ public class GeneralAdvertiseImageController {
 
 
     @Operation(summary = "Update general image", description = "Update general image by ID")
-    @PreAuthorize("hasAnyRole('USER')")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'HOST', 'ADS_AGENT')")
     @PutMapping
     public ResponseEntity<StandardResponseDTO> updateGeneralImage(
             @ModelAttribute GeneralAdvertiseImageUpdateRequestDTO dto) {

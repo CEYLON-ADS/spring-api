@@ -25,7 +25,7 @@ public class GeneralAdvertisementController {
     private final GeneralAdvertisementService advertisementService;
 
     @Operation(summary = "Create Advertisement", description = "Create a new general advertisement")
-    @PreAuthorize("hasAnyRole('USER')")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'HOST', 'ADS_AGENT')")
     @PostMapping
     public ResponseEntity<StandardResponseDTO> createAdvertisement(
             @ModelAttribute GeneralAdvertisementRequestDTO dto) {
@@ -40,7 +40,7 @@ public class GeneralAdvertisementController {
     }
 
     @Operation(summary = "Create Advertisement by admin", description = "Create a new general advertisement by admin")
-    @PreAuthorize("hasAnyRole('ADMIN','HOST')")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'HOST', 'ADS_AGENT')")
     @PostMapping("/by-admin")
     public ResponseEntity<StandardResponseDTO> createAdvertisementByAdmin(
             @ModelAttribute GeneralAdvertisementByAdminRequestDTO dto) {
@@ -55,7 +55,7 @@ public class GeneralAdvertisementController {
     }
 
     @Operation(summary = "Update Advertisement", description = "Update advertisement details by ID")
-    @PreAuthorize("hasAnyRole('USER')")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'HOST', 'ADS_AGENT')")
     @PutMapping("/{adId}")
     public ResponseEntity<StandardResponseDTO> updateAdvertisement(
             @PathVariable UUID adId,
@@ -71,7 +71,7 @@ public class GeneralAdvertisementController {
     }
 
     @Operation(summary = "Delete Advertisement", description = "Delete advertisement by ID")
-    @PreAuthorize("hasAnyRole('USER')")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'HOST', 'ADS_AGENT')")
     @DeleteMapping("/{adId}")
     public ResponseEntity<StandardResponseDTO> deleteAdvertisement(@PathVariable UUID adId) {
         advertisementService.delete(adId);
@@ -98,7 +98,7 @@ public class GeneralAdvertisementController {
     }
 
     @Operation(summary = "Get Advertisement by ID", description = "Retrieve advertisement details by ID")
-    @PreAuthorize("hasAnyRole('USER')")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'HOST', 'ADS_AGENT')")
     @GetMapping("/by-user/{userId}")
     public ResponseEntity<StandardResponseDTO> getAdvertisementByUserId(
             @PathVariable UUID userId,
@@ -148,7 +148,7 @@ public class GeneralAdvertisementController {
     }
 
     @Operation(summary = "Mark Advertisement as Fake", description = "Mark an advertisement as fake")
-    @PreAuthorize("hasAnyRole('USER')")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'HOST', 'ADS_AGENT')")
     @PostMapping("/{adId}/mark-fake")
     public ResponseEntity<StandardResponseDTO> markAsFake(
             @PathVariable UUID adId,
@@ -164,7 +164,7 @@ public class GeneralAdvertisementController {
     }
 
     @Operation(summary = "Unmark Advertisement as Fake", description = "Remove fake status from an advertisement")
-    @PreAuthorize("hasAnyRole('USER')")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'HOST', 'ADS_AGENT')")
     @PostMapping("/{adId}/unmark-fake")
     public ResponseEntity<StandardResponseDTO> unmarkAsFake(@PathVariable UUID adId) {
         advertisementService.unmarkAsFake(adId);
