@@ -94,12 +94,14 @@ public class AuthServiceImpl implements AuthService {
             throw new BadRequestException("Mobile number cannot be empty");
         }
 
+        String countryCode = dto.getCountryCode() != null ? dto.getCountryCode().trim() : "+94";
+        
         // Check if user exists
-        ApplicationUser user = userRepository.findByMobileNumber(reformatMobileNumber(dto.getMobileNumber().trim(),dto.getCountryCode().trim()))
+        ApplicationUser user = userRepository.findByMobileNumber(reformatMobileNumber(dto.getMobileNumber().trim(), countryCode))
                 .orElseGet(() -> {
                     // Create new user if doesn't exist
                     ApplicationUser newUser = ApplicationUser.builder()
-                            .mobileNumber(reformatMobileNumber(dto.getMobileNumber().trim(),dto.getCountryCode().trim()))
+                            .mobileNumber(reformatMobileNumber(dto.getMobileNumber().trim(), countryCode))
                             .accountId(idGenerator.generateUserAccountId(userRepository))
                             .activeState(true)
                             .roles(new HashSet<>())
