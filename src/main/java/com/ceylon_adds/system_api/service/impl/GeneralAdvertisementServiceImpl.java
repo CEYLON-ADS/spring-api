@@ -9,6 +9,7 @@ import com.ceylon_adds.system_api.entity.*;
 import com.ceylon_adds.system_api.entity.enums.UserRole;
 import com.ceylon_adds.system_api.exception.BadRequestException;
 import com.ceylon_adds.system_api.exception.EntryNotFoundException;
+import com.ceylon_adds.system_api.entity.GeneralAdvertisePaymentSlip;
 import com.ceylon_adds.system_api.repository.*;
 import com.ceylon_adds.system_api.service.FileService;
 import com.ceylon_adds.system_api.service.GeneralAdvertisementService;
@@ -306,12 +307,19 @@ public class GeneralAdvertisementServiceImpl implements GeneralAdvertisementServ
         GeneralAdvertisement generalAdvertisement = advertisementRepo.findById(advertisementId)
                 .orElseThrow(() -> new EntryNotFoundException("General advertisement not found"));
 
-        boolean hasProcesses = processRepo.existsByAdvertisement(generalAdvertisement);
-
-        if (hasProcesses) {
-            throw new BadRequestException("Cannot delete advertisement with existing processes");
+        if (generalAdvertisement.getGeneralAdvertisementProcess() != null) {
+            for (GeneralAdvertisementProcess process : generalAdvertisement.getGeneralAdvertisementProcess()) {
+                if (process.getSlips() != null) {
+                    for (GeneralAdvertisePaymentSlip slip : process.getSlips()) {
+                        fileService.delete(
+                                fileDataHandler.byteArrayToString(slip.getFileName()),
+                                bucketName,
+                                fileDataHandler.byteArrayToString(slip.getDirectory())
+                        );
+                    }
+                }
+            }
         }
-
 
         for (AdvertiseImage advertisementImage : generalAdvertisement.getAdvertiseImages()) {
             fileService.delete(
