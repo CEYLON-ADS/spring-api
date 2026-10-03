@@ -158,7 +158,7 @@ public class AuthServiceImpl implements AuthService {
             Message message = Message.creator(
                     new PhoneNumber("whatsapp:" + recipientNumber),
                     new PhoneNumber(twilioWhatsAppNumber),
-                    "Your Queenslanka verification code is: " + otpCode
+                    otpCode + " is your verification code. For your security, do not share this code."
             ).create();
             logger.info("OTP sent via WhatsApp to {}: Message SID {}", recipientNumber, message.getSid());
         } catch (Exception e) {
