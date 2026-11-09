@@ -52,8 +52,6 @@ public class GeneralAdvertisementProcessServiceImpl implements GeneralAdvertisem
         AdvertiseType adType = advertiseTypeRepo.findById(dto.getAdType())
                 .orElseThrow(() -> new EntryNotFoundException("Ad type not found"));
 
-        if (dto.getSlips() == null) throw new BadRequestException("Advertisement slip required");
-
         GeneralAdvertisementProcess process = GeneralAdvertisementProcess.builder()
                 .advertisement(ad)
                 .verifiedStatus(false)
@@ -74,21 +72,27 @@ public class GeneralAdvertisementProcessServiceImpl implements GeneralAdvertisem
         UploadedResourceBinaryDataDTO uploadedResourceBinaryDataDTO;
         List<GeneralAdvertisePaymentSlip> generalAdvertisePaymentSlips = new ArrayList<>();
 
-        for (MultipartFile slip : dto.getSlips()){
-            uploadedResourceBinaryDataDTO = fileService.create(slip, bucketName, "payments/generalAdvertisement/slips");
+        if (dto.getSlips() != null && !dto.getSlips().isEmpty()) {
+            for (MultipartFile slip : dto.getSlips()){
+                if (slip != null && !slip.isEmpty()) {
+                    uploadedResourceBinaryDataDTO = fileService.create(slip, bucketName, "payments/generalAdvertisement/slips");
 
-            generalAdvertisePaymentSlips.add(
-                    GeneralAdvertisePaymentSlip.builder()
-                            .ref(savedAd)
-                            .directory(fileDataHandler.stringToByteArray(uploadedResourceBinaryDataDTO.getDirectory()))
-                            .hash(fileDataHandler.blobToByteArray(uploadedResourceBinaryDataDTO.getHash()))
-                            .fileName(fileDataHandler.blobToByteArray(uploadedResourceBinaryDataDTO.getFilename()))
-                            .resourceUrl(fileDataHandler.blobToByteArray(uploadedResourceBinaryDataDTO.getResourceUrl()))
-                            .build()
-            );
+                    generalAdvertisePaymentSlips.add(
+                            GeneralAdvertisePaymentSlip.builder()
+                                    .ref(savedAd)
+                                    .directory(fileDataHandler.stringToByteArray(uploadedResourceBinaryDataDTO.getDirectory()))
+                                    .hash(fileDataHandler.blobToByteArray(uploadedResourceBinaryDataDTO.getHash()))
+                                    .fileName(fileDataHandler.blobToByteArray(uploadedResourceBinaryDataDTO.getFilename()))
+                                    .resourceUrl(fileDataHandler.blobToByteArray(uploadedResourceBinaryDataDTO.getResourceUrl()))
+                                    .build()
+                    );
+                }
+            }
+
+            if (!generalAdvertisePaymentSlips.isEmpty()) {
+                generalAdvertisePaymentSlipRepository.saveAll(generalAdvertisePaymentSlips);
+            }
         }
-
-        generalAdvertisePaymentSlipRepository.saveAll(generalAdvertisePaymentSlips);
 
 
 

@@ -178,10 +178,6 @@ public class GeneralAdvertisementServiceImpl implements GeneralAdvertisementServ
                 });
 
         if (dto.getImages() == null) throw new BadRequestException("Advertisement images required");
-        if (dto.getSlips() == null) throw new BadRequestException("Advertisement slips required");
-
-
-
 
         GeneralAdvertisement ad = GeneralAdvertisement.builder()
                 .title(dto.getTitle())
@@ -248,22 +244,27 @@ public class GeneralAdvertisementServiceImpl implements GeneralAdvertisementServ
 
         GeneralAdvertisementProcess savedAdProcess = processRepo.save(process);
 
+        if (dto.getSlips() != null && !dto.getSlips().isEmpty()) {
+            for (MultipartFile file : dto.getSlips()){
+                if (file != null && !file.isEmpty()) {
+                    uploadedResourceBinaryDataDTO = fileService.create(file, bucketName, "payments/generalAdvertisement/slips");
 
-        for (MultipartFile file : dto.getSlips()){
-            uploadedResourceBinaryDataDTO = fileService.create(file, bucketName, "payments/generalAdvertisement/slips");
+                    generalAdvertisePaymentSlips.add(
+                            GeneralAdvertisePaymentSlip.builder()
+                                    .ref(savedAdProcess)
+                                    .directory(fileDataHandler.stringToByteArray(uploadedResourceBinaryDataDTO.getDirectory()))
+                                    .hash(fileDataHandler.blobToByteArray(uploadedResourceBinaryDataDTO.getHash()))
+                                    .fileName(fileDataHandler.blobToByteArray(uploadedResourceBinaryDataDTO.getFilename()))
+                                    .resourceUrl(fileDataHandler.blobToByteArray(uploadedResourceBinaryDataDTO.getResourceUrl()))
+                                    .build()
+                    );
+                }
+            }
 
-            generalAdvertisePaymentSlips.add(
-                    GeneralAdvertisePaymentSlip.builder()
-                            .ref(savedAdProcess)
-                            .directory(fileDataHandler.stringToByteArray(uploadedResourceBinaryDataDTO.getDirectory()))
-                            .hash(fileDataHandler.blobToByteArray(uploadedResourceBinaryDataDTO.getHash()))
-                            .fileName(fileDataHandler.blobToByteArray(uploadedResourceBinaryDataDTO.getFilename()))
-                            .resourceUrl(fileDataHandler.blobToByteArray(uploadedResourceBinaryDataDTO.getResourceUrl()))
-                            .build()
-            );
+            if (!generalAdvertisePaymentSlips.isEmpty()) {
+                generalAdvertisePaymentSlipRepository.saveAll(generalAdvertisePaymentSlips);
+            }
         }
-
-        generalAdvertisePaymentSlipRepository.saveAll(generalAdvertisePaymentSlips);
 
 
         //  Handle Cities (if any)
