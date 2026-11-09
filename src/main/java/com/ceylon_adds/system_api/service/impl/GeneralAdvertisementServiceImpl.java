@@ -553,11 +553,15 @@ public class GeneralAdvertisementServiceImpl implements GeneralAdvertisementServ
 
         String description = null;
         Double price = null;
+        String adType = null;
         if (process != null) {
             if (process.getDescription() != null) {
                 description = fileDataHandler.byteArrayToString(process.getDescription());
             }
             price = process.getAdvertiseCost();
+            if (process.getAdvertiseType() != null) {
+                adType = process.getAdvertiseType().getType();
+            }
         }
 
         return GeneralAdvertisementResponseDTO.builder()
@@ -597,6 +601,7 @@ public class GeneralAdvertisementServiceImpl implements GeneralAdvertisementServ
                 .fakeCount(ad.getFakeCount())
                 .description(description)
                 .price(price)
+                .adType(adType)
                 .createdDate(ad.getCreatedDate())
                 .build();
     }

@@ -37,5 +37,6 @@ public class GeneralAdvertisementResponseDTO {
     private Integer fakeCount;
     private String description;
     private Double price;
+    private String adType;
     private Instant createdDate;
 }
