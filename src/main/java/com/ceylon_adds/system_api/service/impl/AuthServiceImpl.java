@@ -186,7 +186,10 @@ public class AuthServiceImpl implements AuthService {
         // Bypass OTP check for local development using master code
         if ("123456".equals(dto.getOtp())) {
             otpRepository.findByApplicationUser(user).ifPresent(otpRepository::delete);
-            return SuccessFullLoginResponseDTO.builder().token(generateJWT(user)).build();
+            return SuccessFullLoginResponseDTO.builder()
+                    .token(generateJWT(user))
+                    .userId(user.getPropertyId())
+                    .build();
         }
 
         OTP otpEntity = otpRepository.findByApplicationUser(user)
@@ -211,8 +214,49 @@ public class AuthServiceImpl implements AuthService {
 
         // Generate JWT
         return SuccessFullLoginResponseDTO.builder().token(generateJWT(user)).userId(user.getPropertyId()).build();
+    }
 
+    @Transactional
+    @Override
+    public SuccessFullLoginResponseDTO loginWithPhone(ApplicationUserLoginRequestDTO dto) {
+        if (dto == null) throw new BadRequestException("Request cannot be null");
 
+        // Validate mobile number
+        if (dto.getMobileNumber() == null || dto.getMobileNumber().trim().isEmpty()) {
+            throw new BadRequestException("Mobile number cannot be empty");
+        }
+
+        String countryCode = dto.getCountryCode() != null ? dto.getCountryCode().trim() : "+94";
+        String formattedNumber = reformatMobileNumber(dto.getMobileNumber().trim(), countryCode);
+
+        // Check if user exists or create new user
+        ApplicationUser user = userRepository.findByMobileNumber(formattedNumber)
+                .orElseGet(() -> {
+                    ApplicationUser newUser = ApplicationUser.builder()
+                            .mobileNumber(formattedNumber)
+                            .accountId(idGenerator.generateUserAccountId(userRepository))
+                            .activeState(true)
+                            .roles(new HashSet<>())
+                            .build();
+                    ApplicationUserRole publicRole = roleRepository.findByRoleName(UserRole.PUBLIC_USER.name())
+                            .orElseGet(() -> roleRepository.save(
+                                    ApplicationUserRole.builder()
+                                            .roleName(UserRole.PUBLIC_USER.name())
+                                            .build()));
+                    ApplicationUserRole defaultRole = roleRepository.findByRoleName(UserRole.USER.name())
+                            .orElseGet(() -> roleRepository.save(
+                                    ApplicationUserRole.builder()
+                                            .roleName(UserRole.USER.name())
+                                            .build()));
+                    newUser.getRoles().add(publicRole);
+                    newUser.getRoles().add(defaultRole);
+                    return userRepository.save(newUser);
+                });
+
+        return SuccessFullLoginResponseDTO.builder()
+                .token(generateJWT(user))
+                .userId(user.getPropertyId())
+                .build();
     }
 
     @Override

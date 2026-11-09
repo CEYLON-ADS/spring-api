@@ -31,6 +31,16 @@ public class AuthController {
                 .build());
     }
 
+    @Operation(summary = "Login with phone number without OTP", description = "Authenticate using mobile number directly without OTP verification, return JWT token")
+    @PostMapping("/login-phone")
+    public ResponseEntity<StandardResponseDTO> loginWithPhone(@RequestBody ApplicationUserLoginRequestDTO dto) {
+        return ResponseEntity.ok(StandardResponseDTO.builder()
+                .code(200)
+                .message("Login successfully")
+                .data(authService.loginWithPhone(dto))
+                .build());
+    }
+
     @Operation(summary = "Verify OTP", description = "Verify OTP sent to the user and return JWT token")
     @PostMapping("/verify-otp")
     public ResponseEntity<StandardResponseDTO> verifyOTP(@RequestBody ApplicationUserOTPRequestDTO dto) {

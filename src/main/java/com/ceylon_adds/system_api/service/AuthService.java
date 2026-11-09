@@ -10,9 +10,9 @@ public interface AuthService {
 
     SuccessFullLoginResponseDTO verifyOTP(ApplicationUserOTPRequestDTO dto);
 
+    SuccessFullLoginResponseDTO loginWithPhone(ApplicationUserLoginRequestDTO dto);
+
     SuccessFullLoginResponseDTO loginWithPassword(com.ceylon_adds.system_api.dto.request.UsernamePasswordLoginRequestDTO dto);
 
     void registerWithPassword(com.ceylon_adds.system_api.dto.request.UsernamePasswordRegisterRequestDTO dto);
-
-
 }

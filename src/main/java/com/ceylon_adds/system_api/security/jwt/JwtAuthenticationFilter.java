@@ -41,9 +41,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 String mobileNumber = claims.getSubject();
                 List<String> roles = claims.get("roles", List.class);
 
-                List<SimpleGrantedAuthority> authorities = roles.stream()
-                        .map(s -> new SimpleGrantedAuthority("ROLE_" + s))
-                        .collect(Collectors.toList());
+                List<SimpleGrantedAuthority> authorities = roles != null
+                        ? roles.stream()
+                                .map(s -> new SimpleGrantedAuthority(s.startsWith("ROLE_") ? s : "ROLE_" + s))
+                                .collect(Collectors.toList())
+                        : java.util.Collections.emptyList();
 
                 UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
                         mobileNumber, null, authorities);
