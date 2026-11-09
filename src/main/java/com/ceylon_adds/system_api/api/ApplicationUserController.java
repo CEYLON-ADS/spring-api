@@ -1,12 +1,14 @@
 package com.ceylon_adds.system_api.api;
 
 import com.ceylon_adds.system_api.dto.request.ApplicationUserRequestDTO;
+import com.ceylon_adds.system_api.dto.request.ChangePasswordRequestDTO;
 import com.ceylon_adds.system_api.dto.response.ApplicationUserResponseDTO;
 import com.ceylon_adds.system_api.dto.response.paginate.PaginateApplicationUserDTO;
 import com.ceylon_adds.system_api.service.ApplicationUserService;
 import com.ceylon_adds.system_api.util.StandardResponseDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -169,6 +171,23 @@ public class ApplicationUserController {
                         .code(200)
                         .message("Ads Agents retrieved successfully")
                         .data(response)
+                        .build()
+        );
+    }
+
+    @Operation(summary = "Change user password", description = "Admin can change password for any user")
+    @PreAuthorize("hasAnyRole('ADMIN', 'HOST')")
+    @PutMapping("/{userId}/password")
+    public ResponseEntity<StandardResponseDTO> changePassword(
+            @PathVariable UUID userId,
+            @Valid @RequestBody ChangePasswordRequestDTO dto) {
+
+        applicationUserService.changePassword(userId, dto.getNewPassword());
+        return ResponseEntity.ok(
+                StandardResponseDTO.builder()
+                        .code(200)
+                        .message("Password updated successfully")
+                        .data(null)
                         .build()
         );
     }

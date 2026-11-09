@@ -308,6 +308,23 @@ public class ApplicationUserServiceImpl implements ApplicationUserService {
                 .build();
     }
 
+    @Override
+    @Transactional
+    public void changePassword(UUID userId, String newPassword) {
+        if (newPassword == null || newPassword.trim().isEmpty()) {
+            throw new BadRequestException("Password cannot be empty");
+        }
+        if (newPassword.trim().length() < 6) {
+            throw new BadRequestException("Password must be at least 6 characters long");
+        }
+
+        ApplicationUser user = applicationUserRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("User not found with ID: " + userId));
+
+        user.setPassword(passwordEncoder.encode(newPassword.trim()));
+        applicationUserRepository.save(user);
+    }
+
     private ApplicationUserResponseDTO mapToResponseDTO(ApplicationUser user) {
         List<String> roleNames = user.getRoles() != null
                 ? user.getRoles().stream().map(ApplicationUserRole::getRoleName).collect(Collectors.toList())

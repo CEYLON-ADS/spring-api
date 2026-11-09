@@ -29,4 +29,6 @@ public interface ApplicationUserService {
     void allocateCredits(UUID userId, Double amount);
 
     PaginateApplicationUserDTO getAdsAgents(String searchText, int page, int size);
+
+    void changePassword(UUID userId, String newPassword);
 }
